@@ -40,7 +40,7 @@ class TaskRow(ListItem):
     def __init__(self, task: Task, local_status: str) -> None:
         label = f"[{task.sheet_status or '—'}] [{local_status}]  {task.title}"
         super().__init__(Label(label))
-        self.task = task
+        self.task_data = task
         self.local_status = local_status
 
 class PetDeskApp(App):
@@ -87,10 +87,10 @@ class PetDeskApp(App):
         if not isinstance(row, TaskRow):
             return
         if row.local_status == "done":
-            self._set_status(f"already done: {row.task.title[:40]}")
+            self._set_status(f"already done: {row.task_data.title[:40]}")
             return
-        tasks.mark(self.cfg.db_path, row.task.id, "done")
-        self._set_status(f"done: {row.task.title[:40]}")
+        tasks.mark(self.cfg.db_path, row.task_data.id, "done")
+        self._set_status(f"done: {row.task_data.title[:40]}")
         self._refresh(initial=False)
 
     # --- internals ---
@@ -128,7 +128,7 @@ class PetDeskApp(App):
         row = event.item
         if not isinstance(row, TaskRow):
             return
-        self._set_status(f"Planning: {row.task.title[:40]}…")
+        self._set_status(f"Planning: {row.task_data.title[:40]}…")
         self.run_worker(
             self._plan_for_row(row),
             exclusive=False,
@@ -139,17 +139,16 @@ class PetDeskApp(App):
         """Worker body. Runs in a worker thread, talks back to the UI."""
         loop = asyncio.get_running_loop()
         try:
-            plan_text = await loop.run_in_executor(None, ai.plan, row.task)
+            plan_text = await loop.run_in_executor(None, ai.plan, row.task_data)
         except ai.AIError as exc:
             self.call_from_thread(self._set_status, f"AI error: {exc}")
             return
         if row.local_status == "pending":
-            tasks.mark(self.cfg.db_path, row.task.id, "planned")
+            tasks.mark(self.cfg.db_path, row.task_data.id, "planned")
         self.call_from_thread(
-            self._set_status, f"Plan ready: {row.task.title[:40]}"
+            self._set_status, f"Plan ready: {row.task_data.title[:40]}"
         )
         self.call_from_thread(self._show_plan, plan_text)
-
     def _call_ai(self, task: Task) -> str:
         return ai.plan(task)
 
