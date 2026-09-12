@@ -21,8 +21,6 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent
 VENV_DIR = PROJECT_DIR / ".venv"
 REQ_FILE = PROJECT_DIR / "requirements.txt"
-
-
 def _venv_python() -> Path | None:
     if os.name == "nt":
         candidate = VENV_DIR / "Scripts" / "python.exe"
@@ -82,9 +80,35 @@ def _pip_install() -> None:
 def _exec_in_venv(argv: list[str]) -> None:
     py = _venv_python()
     assert py is not None
-    os.chdir(PROJECT_DIR)
-    os.execv(str(py), [str(py), "-m", "src.cli", *argv])
+def _load_dotenv(path: Path) -> None:
+    """Tiny .env loader. Lines are KEY=value; comments start with #;
+    quotes are stripped. Does not overwrite already-set env vars."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        key = k.strip()
+        if not key or key in os.environ:
+            continue
+        val = v.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+            val = val[1:-1]
+        os.environ[key] = val
 
+def _exec_in_venv(argv: list[str]) -> None:
+    py = _venv_python()
+    assert py is not None
+    os.chdir(PROJECT_DIR)
+    # Load .env / .env.local from the project directory so the child
+    # process inherits the credentials regardless of the user's cwd.
+    for name in (".env", ".env.local"):
+        _load_dotenv(PROJECT_DIR / name)
+    os.execv(str(py), [str(py), "-m", "src.cli", *argv])
 
 def main() -> int:
     if _need_install():
