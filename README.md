@@ -35,27 +35,34 @@ In the TUI: `enter` opens a plan, `d` marks the highlighted row done,
    On first run, `pdesk` creates `.venv/`, installs `requirements.txt`,
    then execs into the venv. Subsequent runs skip setup.
 
-2. Create a service-account JSON key in Google Cloud Console with the
-   Sheets API enabled. Note the SA email (looks like
-   `something@project.iam.gserviceaccount.com`).
+2. Copy the credential template and fill in your values:
 
-3. Share the Sheet workbook with that email as **Viewer**.
-
-4. Set three env vars (or put them in `~/.config/pdesk/pdesk.toml`):
-
-   ```ini
-   # ~/.config/pdesk/pdesk.toml
-   SHEET_ID="..."               # from the Sheet URL
-   SA_PATH="/path/to/sa.json"   # service-account JSON
-   MINIMAX_API_KEY="..."
+   ```bash
+   cd pdesk
+   cp .env.example .env.local      # git-ignored
    ```
 
-   Defaults: `SHEET_RANGE = 'Chưa giải quyết'!A1:H1000`,
-   `DB_PATH = ~/.local/share/pdesk/tasks.sqlite`.
+   `.env.local` holds three values: `PDESK_SHEET_ID`,
+   `PDESK_SA_PATH`, `PDESK_MINIMAX_API_KEY`. Open `.env.local` in
+   any editor; fields are inline-commented so the format is obvious.
 
-5. Run `pdesk config show` to confirm everything is loaded.
+   Equivalent: export the same `PDESK_*` vars in your shell, or write
+   them to `~/.config/pdesk/pdesk.toml` (TOML keys without the
+   `PDESK_` prefix). The loader checks env first, then TOML.
 
-6. `pdesk` to open the TUI.
+3. Set up Google Sheets access once:
+
+   - Create a Google Cloud project, enable the **Sheets API**, create a
+     service account, download its JSON key. The SA email looks like
+     `something@<project>.iam.gserviceaccount.com`.
+   - Share the target workbook with that SA email as **Viewer**. (If
+     the workbook owner is someone else and you're a Viewer too, ask
+     them to do the share — service accounts are how pdesk authenticates,
+     they don't replace your Google login.)
+
+4. Run `pdesk config show` to confirm everything is loaded.
+
+5. `pdesk` to open the TUI.
 
 ## Sheet schema
 
@@ -74,6 +81,7 @@ The reader targets the `Chưa giải quyết` tab in your workbook.
 pdesk/
 ├── README.md
 ├── AGENTS.md
+├── .env.example          # template — copy to .env.local, fill in
 ├── .gitignore
 ├── requirements.txt
 ├── pdesk.py              # bootstrap wrapper
