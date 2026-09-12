@@ -83,55 +83,32 @@ def fetch_tasks(cfg: Config) -> list[Task]:
 
 
 def _parse_blocks(rows: list[list[str]]) -> list[Task]:
-    """Group rows by blank-row separators, emit tasks whose G chip is
-    in `KEEP_STATUSES`.
+    """Each row with non-empty A and a keep-status chip in H is a Task.
+
+    We initially assumed multi-row blocks (with blank rows as separators)
+    based on the first screenshot. After live smoke against the user's
+    Sheet, we discovered the actual layout is one row per task — the
+    chip sits on the same row as the task description. If a row has
+    text but no chip, it's not actionable (no status set yet).
     """
     if not rows:
         return []
 
     out: list[Task] = []
-    block_start: int | None = None
-    block_a: list[tuple[int, str]] = []   # (row_index_1based, value)
-    block_g: list[tuple[int, str]] = []
-
-    def flush(end_idx: int) -> None:
-        nonlocal block_start, block_a, block_g
-        if block_start is None or not block_a:
-            block_start, block_a, block_g = None, [], []
-            return
-        chip = next((v.strip() for _, v in block_g if v.strip()), "")
-        start_snapshot = block_start
-        a_snapshot = block_a
-        block_start, block_a, block_g = None, [], []
-        if chip not in KEEP_STATUSES:
-            return
-        title = a_snapshot[0][1].strip()
-        desc_lines = [v for _, v in a_snapshot[1:]]
-        description = "\n".join(desc_lines).strip()
+    for idx, row in enumerate(rows, start=1):
+        padded = row + [""] * (9 - len(row))
+        a_val = (padded[0] or "").strip()
+        h_val = (padded[7] or "").strip()
+        if not a_val:
+            continue
+        if h_val not in KEEP_STATUSES:
+            continue
         out.append(
             Task(
-                id=f"row-{start_snapshot}-row-{end_idx}",
-                title=title,
-                description=description,
-                sheet_status=chip,
+                id=f"row-{idx}",
+                title=a_val.split("\n", 1)[0],
+                description=a_val,
+                sheet_status=h_val,
             )
         )
-
-    for idx, row in enumerate(rows, start=1):
-        # Pad row to column H so index 6 (G) and 7 (H) always exist.
-        padded = row + [""] * (8 - len(row))
-        a_val = (padded[0] or "").strip()
-        g_val = (padded[6] or "").strip()
-        if not a_val and not g_val:
-            # Blank row inside the block separator.
-            flush(idx - 1)
-            continue
-        if block_start is None:
-            block_start = idx
-        if a_val:
-            block_a.append((idx, a_val))
-        if g_val:
-            block_g.append((idx, g_val))
-
-    flush(len(rows))
     return out

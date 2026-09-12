@@ -41,20 +41,14 @@ def _cfg_from_env() -> Config:
 
 
 def main() -> int:
-    # Static unit check: parse a fixture of A + G values.
+    # Static unit check: parse a fixture of single-row tasks. Column A
+    # holds the description, column H holds the status chip.
     fixture = [
-        ["", "", "", "", "", "", "", ""],                                # blank
-        ["Dorm: chuyển qua OP là khách", "", "", "", "", "", "", ""],     # task 1
-        ["Đơn giá : giá chia 2", "", "", "", "", "", "", ""],
-        ["Số lượng là số khách", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "Ưu tiên", "Hiếu"],
-        ["", "", "", "", "", "", "", ""],                                # blank
-        ["Package : xem lại D1 là D0", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "Xem lại", "Hiếu"],
-        ["", "", "", "", "", "", "", ""],
-        ["Done task — already handled", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "Done", "Hiếu"],
-        ["", "", "", "", "", "", "", ""],
+        ["Dorm: chuyển qua OP là khách\nĐơn giá : giá chia 2", "", "", "", "", "", "", "Ưu tiên", "Hiếu"],
+        ["", "", "", "", "", "", "", "", ""],
+        ["Package : xem lại D1 là D0", "", "", "", "", "", "", "Xem lại", "Hiếu"],
+        ["", "", "", "", "", "", "", "", ""],
+        ["Done task — already handled", "", "", "", "", "", "", "Done", "Hiếu"],
     ]
     parsed = _parse_blocks(fixture)
     if len(parsed) != 2:

@@ -10,6 +10,23 @@ They are here to keep the next agent from repeating them.
 
 ## Rules
 
+- **The Sheet schema is one row per task, not multi-row blocks.**
+  We initially assumed tasks spanned multiple rows with blank-row
+  separators. Live smoke on 2026-09-12 showed the actual layout is
+  one row per task: column A holds the description, column H holds
+  the status chip (`Ưu tiên`, `Xem lại`, `Done`, `Hiếu`, …), all
+  on the same row. `src/sheets.py::_parse_blocks` was rewritten to
+  handle single-row tasks. If a future Sheet author inserts
+  multi-row blocks, this code collapses each non-blank row into a
+  separate task. Verify against the live sheet, not the plan.
+
+- **Status chip is column H, not G.** Earlier reading of a screenshot
+  with the header off by one column led us to filter on column G.
+  The actual header "Trạng thái" is in column H (index 7). The
+  filter reads `padded[7]`; if a future Sheet reshuffles columns,
+  re-verify with `tests/_debug_dump.py` (or equivalent) and update
+  this comment.
+
 - **`SearchInput.on_key` does not apply here.** Unlike
   `music-youtube`, pdesk's TUI uses a `ListView`, not a search `Input`.
   Bind Enter on the list (Textual emits `ListView.Selected`); do not
@@ -31,7 +48,7 @@ They are here to keep the next agent from repeating them.
 
 - **Sheet chip cells need `valueRenderOption="FORMATTED_VALUE"`.**
   Without it, `values().get()` returns rich-text metadata and the
-  chip text is empty in `padded[6]`. The current `src/sheets.py`
+  chip text is empty in `padded[7]`. The current `src/sheets.py`
   sets this explicitly; if a future refactor drops it, no chip
   text will surface and `_parse_blocks` will silently drop every
   task. Verify with the unit fixture in `tests/smoke_sheets.py` if
@@ -48,7 +65,7 @@ They are here to keep the next agent from repeating them.
   `push_screen()` (that's for `Screen` subclasses only). The MVP
   displays the first line in the status bar and writes the full
   plan to `~/.local/share/pdesk/plans.log`. A proper modal screen
-  is a phase-6 polish — don't refactor `_show_plan` until you know
+  is a phase-7 polish — don't refactor `_show_plan` until you know
   what the replacement Screen class needs to look like.
 
 - **`Textual` + `asyncio.run_in_executor`.** The `on_list_view_selected`
@@ -61,3 +78,11 @@ They are here to keep the next agent from repeating them.
   Windows branch reads `%APPDATA%` / `%LOCALAPPDATA%`. If you ever
   touch it, also re-test the wrapper path `pdesk.py` because it
   has its own POSIX/Windows split.
+
+- **Filter set is just `Ưu tiên` + `Xem lại`.** The Sheet contains
+  many other status values (`Done`, `Hiếu`, `Hà`, `để sau`,
+  `Gấp`, `THEO DÕI`, `Đang sửa`, `Chưa rõ`, …). The user
+  explicitly chose to keep the filter narrow as of 2026-09-12.
+  If a wider filter is wanted, update `KEEP_STATUSES` in
+  `src/sheets.py` and update `tests/smoke_sheets.py`'s fixture to
+  cover the new values.
